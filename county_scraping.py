@@ -2,6 +2,10 @@ import time
 from selenium import webdriver
 import pandas as pd
 from bs4 import BeautifulSoup
+from copy import deepcopy
+import numpy as np
+import ast
+
 
 
 def read_inputs(csv_file):
@@ -10,9 +14,11 @@ def read_inputs(csv_file):
     to_date = str(data.iloc[1][1].replace('.', '-'))
     return (from_date, to_date)
 
+
 def get_number_of_pages(from_date, to_date):
     driver = webdriver.Chrome('chromedriver')
-    driver.get('https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-1'.format(from_date, to_date))
+    driver.get(
+        'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-1'.format(from_date, to_date))
     time.sleep(1)
     number_of_results_row = driver.find_element_by_xpath('//*[@id="result-stats"]').text
     number_of_results = eval(number_of_results_row.split('results')[0][:-1].replace(',', ''))
@@ -23,7 +29,9 @@ def get_number_of_pages(from_date, to_date):
 
 
 def get_page_link(from_date, to_date, page_number):
-    return('https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-{}'.format(from_date, to_date, page_number))
+    return ('https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-{}'.format(from_date, to_date,
+                                                                                                   page_number))
+
 
 def extract_data_from_page(page_link, row_index):
     driver = webdriver.Chrome('chromedriver')
@@ -57,7 +65,8 @@ def extract_data_from_page(page_link, row_index):
     County = BeautifulSoup(str(tds[0]), 'html.parser').text
     dict.update({'County': County})
 
-    url_code = BeautifulSoup(str(tds[1]), 'html.parser').text
+    Instrument = BeautifulSoup(str(tds[1]), 'html.parser').text.replace('\n', '')
+    dict.update({'Instrument': Instrument})
 
     Type = BeautifulSoup(str(tds[2]), 'html.parser').find('a').text
     dict.update({'Type': Type})
@@ -65,16 +74,48 @@ def extract_data_from_page(page_link, row_index):
     Book = BeautifulSoup(str(tds[3]), 'html.parser').text
     dict.update({'Book': Book})
 
+    Page = BeautifulSoup(str(tds[3]), 'html.parser').text
+    dict.update({'Page': Page})
+
     Recorded_on = BeautifulSoup(str(tds[7]), 'html.parser').text.replace('\n', '')
     dict.update({'Recorded_on': Recorded_on})
 
     People = BeautifulSoup(str(tds[5]), 'html.parser').text.replace('\n', '')
     dict.update({'People': People})
 
-    driver.get('https://okcountyrecords.com/detail/' + County + '/' + url_code)
+    driver.get('https://okcountyrecords.com/detail/' + County + '/' + Instrument)
     soup = BeautifulSoup(driver.page_source, 'html.parser')
 
     return dict
+
+
+def create_csv_form_text_file(text_file, output_file_name):
+    columns = ['Type',
+            'Book',
+            'Page',
+            'County',
+            'Instrument',
+            'Recorded',
+            'Filing_Fees',
+            'Mortgage_amount',
+            'Document_stamps',
+            'Recorded_on',
+            'Instrument_date',
+            'Returned_on',
+            'Grantor',
+            'Grantee',
+            'Legal Description'
+            ]
+
+    dicts = open(text_file, 'r').readlines()
+
+    df = pd.DataFrame(columns=columns)
+    for dict in dicts:
+        dict = ast.literal_eval(dict)
+        df = df.append(dict, ignore_index=True)
+
+    df.index = np.arange(1, len(df) + 1)
+    df.to_csv(output_file_name)
 
 
 if __name__ == "__main__":
@@ -82,12 +123,22 @@ if __name__ == "__main__":
     inputs = read_inputs("inputs.csv")
     number_of_pages = get_number_of_pages(inputs[0], inputs[1])
 
+    with open('output.txt', 'w') as output_text_file:
+        pass
+
+    dicts = []
     for page_number in range(number_of_pages):
         print('Page: ', page_number + 1)
         page_link = get_page_link(inputs[0], inputs[1], page_number + 1)
         print('Page link: ', page_link)
         for row_index in range(15):
             print('Row: ', row_index + 1)
-            data = extract_data_from_page(page_link, row_index + 1)
-            print(data)
+            dict = extract_data_from_page(page_link, row_index + 1)
+            print(dict)
 
+            with open('output.txt', 'a') as output_text_file:
+                output_text_file.write(str(dict))
+                output_text_file.write('\n')
+            dicts.append(deepcopy(dict))
+
+    create_csv_form_text_file('output.txt', 'output.csv')
