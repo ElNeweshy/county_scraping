@@ -87,7 +87,10 @@ def extract_data_from_page(page_link, row_index):
     Recorded = BeautifulSoup(str(tds[7]), 'html.parser').text.replace('\n', '')
     dict.update({'Recorded': Recorded})
 
-    People = BeautifulSoup(str(tds[5]), 'html.parser').text.replace('\n', '')
+    People = BeautifulSoup(str(tds[5]), 'html.parser').text
+    if '\n' in People:
+        People = People[1:]
+        People = People.replace('\n', '***')
     dict.update({'People': People})
 
     if Instrument != '':
@@ -113,16 +116,17 @@ def extract_data_from_page(page_link, row_index):
 
         try:
             Grantee = driver.find_element_by_xpath('//*[@id="detail-people"]/ul/li[2]/ul/li').text.replace('Search',
-                                                                                                                '').replace(
+                                                                                                           '').replace(
                 '\n', '')
             dict.update({'Grantee': Grantee})
         except:
             pass
 
         try:
-            Legal_Description = driver.find_element_by_xpath('//*[@id="detail-legals"]/ul/li').text.replace('Search',
-                                                                                                            '').replace(
-                '\n', '')
+            Legal_Description = driver.find_element_by_xpath('//*[@id="detail-legals"]/ul').text
+            if 'Search\n' in Legal_Description:
+                Legal_Description = Legal_Description[7:]
+                Legal_Description = Legal_Description.replace('\nSearch\n', '***')
             dict.update({'Legal_Description': Legal_Description})
         except:
             pass
@@ -184,7 +188,7 @@ if __name__ == "__main__":
     with open('output.txt', 'w') as output_text_file:
         pass
 
-    dicts = []
+    # dicts = []
     for page_number in range(number_of_pages):
         print('Page:', page_number + 1)
         page_link = get_page_link(inputs[0], inputs[1], page_number + 1)
@@ -202,6 +206,5 @@ if __name__ == "__main__":
             with open('output.txt', 'a') as output_text_file:
                 output_text_file.write(str(dict))
                 output_text_file.write('\n')
-            dicts.append(deepcopy(dict))
-
-    create_csv_form_text_file('output.txt', 'output.csv')
+                # dicts.append(deepcopy(dict))
+                create_csv_form_text_file('output.txt', 'output.csv')
