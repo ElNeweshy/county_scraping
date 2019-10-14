@@ -108,16 +108,19 @@ def extract_data_from_page(page_link, row_index):
         dict.update({'Document_stamps': Document_stamps})
 
         try:
-            Grantor = driver.find_element_by_xpath(
-                '// *[ @ id = "detail-people"] / ul / li[1] / ul / li').text.replace('Search', '').replace('\n', '')
+            Grantor = driver.find_element_by_xpath('//*[@id="detail-people"]/ul/li[1]/ul').text
+            if 'Search\n' in Grantor:
+                Grantor = Grantor[7:]
+                Grantor = Grantor.replace('\nSearch\n', '***')
             dict.update({'Grantor': Grantor})
         except:
             pass
 
         try:
-            Grantee = driver.find_element_by_xpath('//*[@id="detail-people"]/ul/li[2]/ul/li').text.replace('Search',
-                                                                                                           '').replace(
-                '\n', '')
+            Grantee = driver.find_element_by_xpath('//*[@id="detail-people"]/ul/li[2]/ul').text
+            if 'Search\n' in Grantee:
+                Grantee = Grantee[7:]
+                Grantee = Grantee.replace('\nSearch\n', '***')
             dict.update({'Grantee': Grantee})
         except:
             pass
