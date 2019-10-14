@@ -11,29 +11,77 @@ def read_inputs(csv_file):
     data = pd.read_csv(csv_file, header=None)
     from_date = str(data.iloc[0][1].replace('.', '-'))
     to_date = str(data.iloc[1][1].replace('.', '-'))
-    return (from_date, to_date)
+    county = str(data.iloc[2][1])
+    if county == 'nan': county = None
+    types = str(data.iloc[3][1])
+    if types == 'nan': types = None
+
+    print('Start date:', from_date)
+    print('End date:', to_date)
+    print('County:', county)
+    print('Types:', types, '\n')
+
+    # Preparing types for url
+    if types != None:
+        types = types.replace(' or ', '%7C').replace(' ', '+').replace('&', '%26')
+
+    return (from_date, to_date, county, types)
 
 
-def get_number_of_pages(from_date, to_date):
+def get_number_of_pages(from_date, to_date, county, types):
     driver = webdriver.Chrome('chromedriver')
-    driver.get(
-        'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-1'.format(from_date, to_date))
-    time.sleep(1)
-    number_of_results_row = driver.find_element_by_xpath('//*[@id="result-stats"]').text
+
+    if county and types:
+        driver.get(
+            'https://okcountyrecords.com/results/instrument-type={}:recorded-start={}:recorded-end={}:site={}/page-1'.format(
+                types, from_date, to_date, county))
+    elif county and not types:
+        driver.get(
+            'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}:site={}/page-1'.format(from_date,
+                                                                                                          to_date,
+                                                                                                          county))
+    elif types and not county:
+        driver.get(
+            'https://okcountyrecords.com/results/instrument-type={}:recorded-start={}:recorded-end={}/page-1'.format(
+                types, from_date, to_date))
+    else:
+        driver.get(
+            'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-1'.format(from_date, to_date))
+    # time.sleep(1)
+    try:
+        number_of_results_row = driver.find_element_by_xpath('//*[@id="result-stats"]').text
+    except:
+        print('\nNo results for this search or there is something wrong with the inputs')
+        exit()
+
     number_of_results = eval(number_of_results_row.split('results')[0][:-1].replace(',', ''))
 
     number_of_pages = int(number_of_results / 15) + 1
 
     print('Number of search results is:', number_of_results)
-    print('Number of pages is:', number_of_pages)
+    print('Number of pages is:', number_of_pages, '\n')
 
     driver.close()
 
     return number_of_pages
 
 
-def get_page_link(from_date, to_date, page_number):
-    return ('https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-{}'.format(from_date, to_date,
+def get_page_link(from_date, to_date, county, types, page_number):
+    if county and types:
+        return (
+            'https://okcountyrecords.com/results/instrument-type={}:recorded-start={}:recorded-end={}:site={}/page-{}'.format(
+                types, from_date, to_date, county, page_number))
+    elif county and not types:
+        return (
+            'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}:site={}/page-{}'.format(
+                from_date, to_date, county, page_number))
+    elif types and not county:
+        return (
+            'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-{}'.format(
+                from_date, to_date, page_number))
+    else:
+        return (
+            'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-{}'.format(from_date, to_date,
                                                                                                    page_number))
 
 
@@ -186,15 +234,14 @@ def create_csv_form_text_file(text_file, output_file_name):
 if __name__ == "__main__":
 
     inputs = read_inputs("inputs.csv")
-    number_of_pages = get_number_of_pages(inputs[0], inputs[1])
+    number_of_pages = get_number_of_pages(inputs[0], inputs[1], inputs[2], inputs[3])
 
     with open('output.txt', 'w') as output_text_file:
         pass
 
-    # dicts = []
     for page_number in range(number_of_pages):
         print('Page:', page_number + 1)
-        page_link = get_page_link(inputs[0], inputs[1], page_number + 1)
+        page_link = get_page_link(inputs[0], inputs[1], inputs[2], inputs[3], page_number + 1)
         print('Page link: ', page_link)
 
         for row_index in range(15):
@@ -209,5 +256,6 @@ if __name__ == "__main__":
             with open('output.txt', 'a') as output_text_file:
                 output_text_file.write(str(dict))
                 output_text_file.write('\n')
-                # dicts.append(deepcopy(dict))
                 create_csv_form_text_file('output.txt', 'output.csv')
+
+    print("\nData extraction is DONE")
