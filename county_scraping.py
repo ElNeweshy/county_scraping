@@ -29,7 +29,7 @@ def read_inputs(csv_file):
 
 
 def get_number_of_pages(from_date, to_date, county, types):
-    driver = webdriver.Chrome('chromedriver')
+    # driver = webdriver.Chrome('chromedriver')
 
     if county and types:
         driver.get(
@@ -61,7 +61,7 @@ def get_number_of_pages(from_date, to_date, county, types):
     print('Number of search results is:', number_of_results)
     print('Number of pages is:', number_of_pages, '\n')
 
-    driver.close()
+    # driver.close()
 
     return number_of_pages
 
@@ -77,7 +77,7 @@ def get_page_link(from_date, to_date, county, types, page_number):
                 from_date, to_date, county, page_number))
     elif types and not county:
         return (
-            'https://okcountyrecords.com/results/recorded-start={}:recorded-end={}/page-{}'.format(
+            'https://okcountyrecords.com/results/instrument-type={}:recorded-start={}:recorded-end={}/page-{}'.format(types,
                 from_date, to_date, page_number))
     else:
         return (
@@ -86,9 +86,9 @@ def get_page_link(from_date, to_date, county, types, page_number):
 
 
 def extract_data_from_page(page_link, row_index):
-    driver = webdriver.Chrome('chromedriver')
+    # driver = webdriver.Chrome('chromedriver')
     driver.get(page_link)
-    time.sleep(1)
+    # time.sleep(1)
 
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     rows = soup.find_all('tr')
@@ -197,7 +197,7 @@ def extract_data_from_page(page_link, row_index):
         Page = driver.find_element_by_xpath('//*[@id="primary-details"]/table/tbody/tr[2]/td').text
         dict.update({'Page': Page})
 
-    driver.close()
+    # driver.close()
 
     return dict
 
@@ -232,6 +232,8 @@ def create_csv_form_text_file(text_file, output_file_name):
 
 
 if __name__ == "__main__":
+    global driver
+    driver = webdriver.Chrome('chromedriver')
 
     inputs = read_inputs("inputs.csv")
     number_of_pages = get_number_of_pages(inputs[0], inputs[1], inputs[2], inputs[3])
@@ -256,6 +258,9 @@ if __name__ == "__main__":
             with open('output.txt', 'a') as output_text_file:
                 output_text_file.write(str(dict))
                 output_text_file.write('\n')
-                create_csv_form_text_file('output.txt', 'output.csv')
+                output_text_file.close()
+
+            create_csv_form_text_file('output.txt', 'output.csv')
+
 
     print("\nData extraction is DONE")
