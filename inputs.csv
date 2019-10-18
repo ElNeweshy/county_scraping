@@ -1,2 +1,4 @@
-from (mm/dd/yyyy),2018.08.01
-to (mm/dd/yyyy),2018.08.15
+from (yyyy.mm.dd),2019.08.01
+to (yyyy.mm.dd),2019.10.01
+county,
+types,ACTIVATE or ADDRESS CHANGE or AFF- CORR or AFFID-DEATH-HEI
